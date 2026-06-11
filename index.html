@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一击爆分</title>
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: Arial; overflow: hidden; text-align: center; }
+        canvas { display: block; margin: 0 auto; background: #111; }
+        #score { position: absolute; top: 10px; left: 10px; font-size: 24px; }
+        #combo { position: absolute; top: 50px; left: 10px; font-size: 20px; color: #ff0; }
+        button { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div id="score">分数: 0</div>
+    <div id="combo">Combo: 0</div>
+    <canvas id="game" width="800" height="600"></canvas>
+    <button onclick="restart()">重新开始</button>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        let score = 0;
+        let combo = 0;
+        let balls = [];
+        let lastTime = Date.now();
+
+        class Ball {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.r = 20 + Math.random() * 20;
+                this.color = ['#f00', '#0f0', '#00f', '#ff0'][Math.floor(Math.random()*4)];
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < this.r || this.x > canvas.width - this.r) this.vx *= -1;
+                if (this.y < this.r || this.y > canvas.height - this.r) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        function spawnBall() {
+            balls.push(new Ball());
+            if (balls.length > 15) balls.shift();
+        }
+
+        function checkClick(x, y) {
+            for (let i = balls.length - 1; i >= 0; i--) {
+                let b = balls[i];
+                let dx = b.x - x;
+                let dy = b.y - y;
+                if (dx*dx + dy*dy < b.r * b.r) {
+                    balls.splice(i, 1);
+                    score += 10 + combo * 5;
+                    combo++;
+                    document.getElementById('score').textContent = `分数: ${score}`;
+                    document.getElementById('combo').textContent = `Combo: ${combo}`;
+                    if (combo >= 3) {
+                        score += 50;
+                        createExplosion(b.x, b.y);
+                    }
+                    return true;
+                }
+            }
+            combo = 0;
+            document.getElementById('combo').textContent = `Combo: 0`;
+            return false;
+        }
+
+        function createExplosion(x, y) {
+            ctx.fillStyle = '#ff0';
+            ctx.font = '30px Arial';
+            ctx.fillText('BOOM!', x-30, y);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            checkClick(x, y);
+        });
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            balls.forEach(b => {
+                b.update();
+                b.draw();
+            });
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            balls = [];
+            score = 0;
+            combo = 0;
+            document.getElementById('score').textContent = '分数: 0';
+            document.getElementById('combo').textContent = 'Combo: 0';
+            for (let i = 0; i < 8; i++) spawnBall();
+            setInterval(spawnBall, 800);
+            gameLoop();
+        }
+
+        function restart() {
+            startGame();
+        }
+
+        window.onload = () => {
+            startGame();
+            setTimeout(() => {
+                if (score === 0) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '20px Arial';
+                    ctx.fillText('点击彩球！3连击得大奖', 200, 100);
+                }
+            }, 500);
+        };
+    </script>
+</body>
+</html>
